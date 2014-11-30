@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import logging
+import serial
+import sys
+import threading
+import time
+
+ser_device = sys.argv[1]
+baud = 115200
+
+controller = sys.argv[2]
+device = sys.argv[3]
+action = sys.argv[4]
+repeat = 5
+
+try:
+    repeat = int(sys.argv[5])
+except IndexError:
+    pass
+
+def send(data):
+    global ser
+    print ">", data.rstrip()
+    ser.write("\n")
+    ser.flush()
+    ser.write(data.rstrip()+"\n")
+    ser.flush()
+    ser.write("\n")
+    ser.flush()
+
+def binstring(n, length):
+    output = '0'*length + bin(n)[2:]
+    return output[-length:]
+
+def homeeasy2_bitpair(bitstr):
+    output = ''
+    for b in bitstr:
+        if b == '1':
+            output += '10'
+        else:
+            output += '01'
+    return output
+
+def homeeasy2(controller, device, on, repeat=5):
+    he_setup = ["A275", "B1225", "C275", "D275", "E10000", "F%d" % (repeat), "G275", "H2675"]
+    for cmd in he_setup:
+        send(cmd)
+    output = 'Z'
+    output += homeeasy2_bitpair(binstring(controller,  26))
+    output += homeeasy2_bitpair('0') # group flag = 0
+    if on:
+        output += homeeasy2_bitpair('1')
+    else:
+        output += homeeasy2_bitpair('0')
+    output += homeeasy2_bitpair(binstring(device, 4)) # group code
+    output += homeeasy2_bitpair('0000') # dim level
+    send(output)
+
+logging.getLogger().setLevel(logging.DEBUG)
+ser = serial.Serial(ser_device, baudrate=baud)
+
+if action == 'on':
+    homeeasy2(long(controller), int(device), True, repeat)
+elif action == 'off':
+    homeeasy2(long(controller), int(device), False, repeat)

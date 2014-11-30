@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+
+import logging
+import serial
+import sys
+import threading
+import time
+
+ser_device = sys.argv[1]
+baud = 115200
+he_device = sys.argv[2]
+action = sys.argv[3]
+repeat = 10
+
+try:
+    repeat = int(sys.argv[4])
+except IndexError:
+    pass
+
+def send(data):
+    global ser
+    print ">", data.rstrip()
+    ser.write("\n")
+    ser.flush()
+    ser.write(data.rstrip()+"\n")
+    ser.flush()
+    ser.write("\n")
+    ser.flush()
+    
+def homeeasy_bitpair(bitstr):
+    output = ''
+    for b in bitstr:
+        output += '0'
+        output += b
+    return output
+
+def homeeasy1(device, on, repeat=10):
+    he_setup = ["A1125", "B375", "C375", "D1125", "E10000", "F%d" % (repeat), "G0", "H0"]
+    he_house = {
+        'A': '0000',
+        'B': '1000',
+        'C': '0100',
+        'D': '1100',
+        'E': '0010',
+        'F': '1010',
+        'G': '0110',
+        'H': '1110'
+    }
+    he_device = {
+        '1': '0000',
+        '2': '1000',
+        '3': '0100',
+        '4': '1100',
+        '5': '0010',
+        '6': '1010',
+        '7': '0110',
+        '8': '1110'
+    }
+    for cmd in he_setup:
+        send(cmd+"\n")
+        ser.flush()
+    if on:
+        action = '0111'
+    else:
+        action = '0110'
+    try:
+        output = 'Z' + homeeasy_bitpair(he_house[device[0]] + he_device[device[1]] + action) + '0'
+        send(output)
+    except ValueError:
+        pass
+    except KeyError:
+        pass
+
+logging.getLogger().setLevel(logging.DEBUG)
+ser = serial.Serial(ser_device, baudrate=baud)
+
+if action == 'on':
+    homeeasy1(he_device, True, repeat)
+elif action == 'off':
+    homeeasy1(he_device, False, repeat)
