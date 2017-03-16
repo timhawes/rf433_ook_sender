@@ -30,7 +30,7 @@ void loop() {
     char inChar = (char)Serial.read();
     // if the incoming character is a newline, set a flag
     // so the main loop can do something about it:
-    if (inChar == '\n') {
+    if (inChar == '\n' || inChar == '\r') {
       stringComplete = true;
       break;
     } else {
